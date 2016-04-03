@@ -81,6 +81,20 @@ var ViewModel = function() {
   };
 
   this.filterPlaces = function() {
+    var filterKeyword = self.filterString().toLowerCase();
+    self.showingPlaces([]);
+    setMapOnAll(null);
+    markers = [];
+    for (var place in favoritePlaces) {
+      if (favoritePlaces[place].name.toLowerCase().includes(filterKeyword)) {
+        self.showingPlaces.push(new Place(favoritePlaces[place]));
+        markers.push(new google.maps.Marker({
+          position: favoritePlaces[place].position,
+          map: map,
+          title: favoritePlaces[place].name
+        }));
+      }
+    }
 
   };
 }
