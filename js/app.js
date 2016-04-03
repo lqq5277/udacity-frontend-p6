@@ -38,6 +38,8 @@ var favoritePlaces = [{
 
 var map;
 var markers = [];
+var infowindow;
+
 function initMap() {
   var centerLatLng = {lat: 37.393283, lng: -121.903051};
   map = new google.maps.Map(document.getElementById('map'), {
@@ -53,6 +55,7 @@ function initMap() {
     }));
   }
   setMapOnAll(map);
+  infowindow = new google.maps.InfoWindow({maxWidth: 300});
 }
 
 function setMapOnAll(map) {
@@ -69,6 +72,7 @@ var Place = function(data) {
 
 var ViewModel = function() {
   var self = this;
+
   this.showingPlaces = ko.observableArray([]);
   favoritePlaces.forEach(function(placeItem) {
     self.showingPlaces.push(new Place(placeItem));
@@ -77,7 +81,15 @@ var ViewModel = function() {
   this.filterString = ko.observable('');
 
   this.showInfo = function(clickedPlace) {
-
+    var placeName = clickedPlace.name();
+    for (var key in markers) {
+      if (placeName === markers[key].title) {
+        map.panTo(markers[key].position);
+        map.setZoom(14);
+        infowindow.setContent(placeName);
+        infowindow.open(map, markers[key]);
+      }
+    }
   };
 
   this.filterPlaces = function() {
