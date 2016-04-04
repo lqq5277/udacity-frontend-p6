@@ -48,11 +48,18 @@ function initMap() {
   });
 
   for (var place in favoritePlaces) {
-    markers.push(new google.maps.Marker({
+    var marker = new google.maps.Marker({
       position: favoritePlaces[place].position,
       map: map,
       title: favoritePlaces[place].name
-    }));
+    });
+    marker.addListener('click', (function(placeCopy, markerCopy) {
+      return function() {
+        infowindow.setContent(favoritePlaces[placeCopy].address);
+        infowindow.open(map, markerCopy);
+      };
+    })(place, marker));
+    markers.push(marker);
   }
   setMapOnAll(map);
   infowindow = new google.maps.InfoWindow({maxWidth: 300});
@@ -82,12 +89,12 @@ var ViewModel = function() {
 
   this.showInfo = function(clickedPlace) {
     var placeName = clickedPlace.name();
-    for (var key in markers) {
-      if (placeName === markers[key].title) {
-        map.panTo(markers[key].position);
+    for (var place in favoritePlaces) {
+      if (placeName === favoritePlaces[place].name) {
+        map.panTo(markers[place].position);
         map.setZoom(14);
-        infowindow.setContent(placeName);
-        infowindow.open(map, markers[key]);
+        infowindow.setContent(favoritePlaces[place].address);
+        infowindow.open(map, markers[place]);
       }
     }
   };
@@ -96,15 +103,12 @@ var ViewModel = function() {
     var filterKeyword = self.filterString().toLowerCase();
     self.showingPlaces([]);
     setMapOnAll(null);
-    markers = [];
     for (var place in favoritePlaces) {
       if (favoritePlaces[place].name.toLowerCase().includes(filterKeyword)) {
         self.showingPlaces.push(new Place(favoritePlaces[place]));
-        markers.push(new google.maps.Marker({
-          position: favoritePlaces[place].position,
-          map: map,
-          title: favoritePlaces[place].name
-        }));
+        markers[place].setMap(map);
+      } else {
+        markers[place].setMap(null);
       }
     }
 
