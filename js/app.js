@@ -7,10 +7,6 @@ var favoritePlaces = [{
   position: {lat: 37.349231, lng: -121.921128},
   address:"610 Newhall Dr, San Jose, CA 95110"
 }, {
-  name: "City Sports Club",
-  position: {lat: 37.383839, lng: -121.898053},
-  address:"1045 E Brokaw Rd, San Jose, CA 95131"
-}, {
   name: "Dr. Martin Luther King, Jr. Library",
   position: {lat: 37.335436, lng: -121.884975},
   address: "150 E San Fernando St, San Jose, CA 95112"
@@ -23,17 +19,13 @@ var favoritePlaces = [{
   position: {lat: 37.378352, lng: -121.891850},
   address: "1560 Oakland Rd, San Jose, CA 95131"
 }, {
-  name: "Santa Clara Golf & Tennis Club",
+  name: "Santa Clara Golf and Tennis Club",
   position: {lat: 37.406211, lng: -121.971746},
   address: "5155 Stars and Stripes Dr, Santa Clara, CA 95054"
 }, {
   name: "99 Ranch Market",
   position: {lat: 37.422845, lng: -121.916828},
   address: "338 Barber Ln, Milpitas, CA 95035"
-}, {
-  name: "99 Ranch Market",
-  position: {lat: 37.386385, lng: -121.884403},
-  address: "1688 Hostetter Rd, San Jose, CA 95131"
 }];
 
 var map;
@@ -55,7 +47,8 @@ function initMap() {
     });
     marker.addListener('click', (function(placeCopy, markerCopy) {
       return function() {
-        infowindow.setContent(favoritePlaces[placeCopy].address);
+        setInfowindow(favoritePlaces[placeCopy]);
+        //infowindow.setContent(favoritePlaces[placeCopy].address);
         infowindow.open(map, markerCopy);
       };
     })(place, marker));
@@ -77,6 +70,31 @@ var Place = function(data) {
   this.address = ko.observable(data.address);
 }
 
+function setInfowindow(place) {
+  var foursqureUrl = 'https://api.foursquare.com/v2/venues/search?' + '&client_id=WFIMC5SVQAC40JYK2WROVKCE401OZJPP1DHRBGIPLCCDLWML' + '&client_secret= 2E1ZBQ01OCXK21H02J44AIK0KXN5YZ1Y5GM0OORQULFR5KVF' + '&v=20160405' + '&ll=' + place.position.lat + ',' + place.position.lng;
+  console.log(foursqureUrl);
+  $.getJSON(foursqureUrl, function(data) {
+    var places = data.response.venues;
+    for (var i = 0; i < places.length; i++) {
+      var item = places[i];
+      var lowcaseName = place.name.toLowerCase();
+  console.log(lowcaseName);
+  console.log(item.name);
+      if (item.name.toLowerCase().includes(lowcaseName)) {
+        var contentString = '<div class="placeInfoWindow">' + '<div class="placeName">' + item.name + '</div>' + '<div class="venueCheckins">' + item.stats.checkinsCount + ' people has checked in on foursquare' + '</span>' + '<div class="venueContact">phone:' + item.contact.formattedPhone + '</div>' + '</div>';
+  console.log(contentString);
+        infowindow.setContent(contentString);
+        return;
+      }
+    }
+    infowindow.setContent('<h4>Can\'t find it on foursquare</h4>');
+  }).error(function(e) {
+    console.log('error');
+    infowindow.setContent('<h4>There is problem to retrieve data</br>Please try again later</h4>');
+  });
+
+}
+
 var ViewModel = function() {
   var self = this;
 
@@ -93,7 +111,9 @@ var ViewModel = function() {
       if (placeName === favoritePlaces[place].name) {
         map.panTo(markers[place].position);
         map.setZoom(14);
-        infowindow.setContent(favoritePlaces[place].address);
+
+        setInfowindow(favoritePlaces[place]);
+//        infowindow.setContent(favoritePlaces[place].address);
         infowindow.open(map, markers[place]);
       }
     }
