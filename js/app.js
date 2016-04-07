@@ -1,4 +1,4 @@
-var favoritePlaces = [{
+var placesDatabase = [{
   name: "Westfield Valley Fair",
   position: {lat: 37.325739, lng: -121.945916},
   address: "2855 Stevens Creek Blvd, Santa Clara, CA 95050"
@@ -29,7 +29,7 @@ var favoritePlaces = [{
 }];
 
 var map;
-var markers = [];
+var places = [];
 var infowindow;
 
 function initMap() {
@@ -38,30 +38,25 @@ function initMap() {
     center: centerLatLng,
     zoom: 12
   });
-
-  for (var place in favoritePlaces) {
-    var marker = new google.maps.Marker({
-      position: favoritePlaces[place].position,
+  places.forEach(function(place) {
+    place.marker = new google.maps.Marker({
+      position: place.position(),
       map: map,
-      title: favoritePlaces[place].name
+      title: place.name()
     });
-    marker.addListener('click', (function(placeCopy, markerCopy) {
+    place.marker.addListener('click', (function(placeCopy) {
       return function() {
-        setInfowindow(favoritePlaces[placeCopy]);
-        //infowindow.setContent(favoritePlaces[placeCopy].address);
-        infowindow.open(map, markerCopy);
+        placeCopy.animateMarker();
+        placeCopy.setInfowindow();
+        infowindow.open(map, placeCopy.marker);
       };
-    })(place, marker));
-    markers.push(marker);
-  }
-  setMapOnAll(map);
+    })(place));
+  });
   infowindow = new google.maps.InfoWindow({maxWidth: 300});
 }
 
-function setMapOnAll(map) {
-  for (var i = 0; i < markers.length; i++) {
-    markers[i].setMap(map);
-  }
+function googleError() {
+    $('#google-error').html('<h5>There is problem to retrieve data from google map</br>Please try again later</h5>');
 }
 
 var Place = function(data) {
@@ -69,72 +64,62 @@ var Place = function(data) {
   this.position = ko.observable(data.position);
   this.address = ko.observable(data.address);
 }
-
-function setInfowindow(place) {
-  var foursqureUrl = 'https://api.foursquare.com/v2/venues/search?' + '&client_id=WFIMC5SVQAC40JYK2WROVKCE401OZJPP1DHRBGIPLCCDLWML' + '&client_secret= 2E1ZBQ01OCXK21H02J44AIK0KXN5YZ1Y5GM0OORQULFR5KVF' + '&v=20160405' + '&ll=' + place.position.lat + ',' + place.position.lng;
-  console.log(foursqureUrl);
+Place.prototype.setInfowindow = function() {
+  var foursqureUrl = 'https://api.foursquare.com/v2/venues/search?' + '&client_id=WFIMC5SVQAC40JYK2WROVKCE401OZJPP1DHRBGIPLCCDLWML' + '&client_secret= 2E1ZBQ01OCXK21H02J44AIK0KXN5YZ1Y5GM0OORQULFR5KVF' + '&v=20160405' + '&ll=' + this.position().lat + ',' + this.position().lng;
+  var lowcaseName = this.name().toLowerCase();
+  var found = false;
   $.getJSON(foursqureUrl, function(data) {
-    var places = data.response.venues;
-    for (var i = 0; i < places.length; i++) {
-      var item = places[i];
-      var lowcaseName = place.name.toLowerCase();
-  console.log(lowcaseName);
-  console.log(item.name);
-      if (item.name.toLowerCase().includes(lowcaseName)) {
-        var contentString = '<div class="placeInfoWindow">' + '<div class="placeName">' + item.name + '</div>' + '<div class="venueCheckins">' + item.stats.checkinsCount + ' people has checked in on foursquare' + '</span>' + '<div class="venueContact">phone:' + item.contact.formattedPhone + '</div>' + '</div>';
-  console.log(contentString);
+    var venues = data.response.venues;
+    for(var i in venues) {
+      if (venues[i].name.toLowerCase().includes(lowcaseName)) {
+        var contentString = '<div class="placeInfoWindow">' + '<div class="placeName">' + venues[i].name + '</div>' + '<div class="venueCheckins">' + venues[i].stats.checkinsCount + ' people has checked in on foursquare' + '</span>' + '<div class="venueContact">phone:' + venues[i].contact.formattedPhone + '</div>' + '</div>';
         infowindow.setContent(contentString);
-        return;
+        found = true;
+        break;
       }
     }
-    infowindow.setContent('<h4>Can\'t find it on foursquare</h4>');
+    if (!found) {
+      infowindow.setContent('<h4>Can\'t find it on foursquare</h4>');
+    }
   }).error(function(e) {
-    console.log('error');
     infowindow.setContent('<h4>There is problem to retrieve data</br>Please try again later</h4>');
   });
-
+};
+Place.prototype.animateMarker = function() {
+  this.marker.setAnimation(google.maps.Animation.BOUNCE);
+};
+Place.prototype.setMap = function(map) {
+  this.marker.setMap(map);
 }
 
 var ViewModel = function() {
   var self = this;
-
   this.showingPlaces = ko.observableArray([]);
-  favoritePlaces.forEach(function(placeItem) {
-    self.showingPlaces.push(new Place(placeItem));
+  placesDatabase.forEach(function(placeItem) {
+    var place = new Place(placeItem);
+    places.push(place);
+    self.showingPlaces.push(place);
   });
-
   this.filterString = ko.observable('');
-
   this.showInfo = function(clickedPlace) {
-    var placeName = clickedPlace.name();
-    for (var place in favoritePlaces) {
-      if (placeName === favoritePlaces[place].name) {
-        map.panTo(markers[place].position);
-        map.setZoom(14);
-
-        setInfowindow(favoritePlaces[place]);
-//        infowindow.setContent(favoritePlaces[place].address);
-        infowindow.open(map, markers[place]);
-      }
-    }
+    map.panTo(clickedPlace.position());
+    map.setZoom(14);
+    clickedPlace.animateMarker();
+    clickedPlace.setInfowindow();
+    infowindow.open(map, clickedPlace.marker);
   };
-
   this.filterPlaces = function() {
     var filterKeyword = self.filterString().toLowerCase();
     self.showingPlaces([]);
-    setMapOnAll(null);
-    for (var place in favoritePlaces) {
-      if (favoritePlaces[place].name.toLowerCase().includes(filterKeyword)) {
-        self.showingPlaces.push(new Place(favoritePlaces[place]));
-        markers[place].setMap(map);
+    places.forEach(function(place) {
+      if (place.name().toLowerCase().includes(filterKeyword)) {
+        self.showingPlaces.push(place);
+        place.setMap(map);
       } else {
-        markers[place].setMap(null);
+        place.setMap(null);
       }
-    }
-
+    });
   };
-}
-
-window.addEventListener('load', initMap);
+};
 
 ko.applyBindings(new ViewModel());
