@@ -1,3 +1,4 @@
+"use strict";
 var placesDatabase = [{
   name: "Westfield Valley Fair",
   position: {lat: 37.325739, lng: -121.945916},
@@ -56,14 +57,17 @@ function initMap() {
 }
 
 function googleError() {
-    $('#google-error').html('<h5>There is problem to retrieve data from google map</br>Please try again later</h5>');
+// I can't find a way to make this work
+//  this.googleError('There is problem to retrieve data from google map</br>Please try again later');
+  $('#google-error').html('<h5>There is problem to retrieve data from google map</br>Please try again later</h5>');
+  //this.showingPlaces([]);
 }
 
 var Place = function(data) {
   this.name = ko.observable(data.name);
   this.position = ko.observable(data.position);
   this.address = ko.observable(data.address);
-}
+};
 Place.prototype.setInfowindow = function() {
   var foursqureUrl = 'https://api.foursquare.com/v2/venues/search?' + '&client_id=WFIMC5SVQAC40JYK2WROVKCE401OZJPP1DHRBGIPLCCDLWML' + '&client_secret= 2E1ZBQ01OCXK21H02J44AIK0KXN5YZ1Y5GM0OORQULFR5KVF' + '&v=20160405' + '&ll=' + this.position().lat + ',' + this.position().lng;
   var lowcaseName = this.name().toLowerCase();
@@ -81,19 +85,23 @@ Place.prototype.setInfowindow = function() {
     if (!found) {
       infowindow.setContent('<h4>Can\'t find it on foursquare</h4>');
     }
-  }).error(function(e) {
+  }).error(function() {
     infowindow.setContent('<h4>There is problem to retrieve data</br>Please try again later</h4>');
   });
 };
 Place.prototype.animateMarker = function() {
-  this.marker.setAnimation(google.maps.Animation.BOUNCE);
+  var self = this;
+  this.marker.setAnimation(google.maps.Animation.DROP);
+  // On my machine, if I uncomment following line, then there is no any animation at all
+  //setTimeout(self.marker.setAnimation(null), 2800);
 };
 Place.prototype.setMap = function(map) {
   this.marker.setMap(map);
-}
+};
 
 var ViewModel = function() {
   var self = this;
+//  this.googleError = ko.observable('');
   this.showingPlaces = ko.observableArray([]);
   placesDatabase.forEach(function(placeItem) {
     var place = new Place(placeItem);
